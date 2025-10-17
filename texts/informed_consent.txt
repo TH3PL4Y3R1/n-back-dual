@@ -1,0 +1,13 @@
+INFORMED CONSENT
+
+Please read the following information carefully before starting the task.
+
+- Purpose: This study investigates working memory using the N-back task.
+- Procedure: You will see letters and must press SPACE when the current letter matches the one shown N trials ago.
+- Risks/Discomforts: Minimal. You may take breaks between blocks.
+- Benefits: There is no direct benefit, but your participation will help research.
+- Voluntary Participation: Your participation is voluntary. You may withdraw at any time by pressing ESC to quit without saving.
+- Data: Responses and timings are recorded anonymously using your provided participant code.
+- Contact: Add your lab contact information here.
+
+By pressing ENTER/RETURN, you confirm that you have read and understood this information and consent to participate.

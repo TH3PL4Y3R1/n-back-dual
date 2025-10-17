@@ -1,0 +1,4 @@
+Welcome to the {{N}}-back task.
+You will see a stream of letters. Press SPACE when the current letter matches the one from {{N}} trial(s) before.
+If it does not match, do not press any key.
+Respond as quickly and accurately as possible.

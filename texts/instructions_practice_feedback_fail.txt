@@ -1,0 +1,3 @@
+Practice complete.
+Accuracy: {{ACC}}% (criterion: {{CRIT}}%).
+You did not reach the criterion. Press ENTER/RETURN to repeat practice.

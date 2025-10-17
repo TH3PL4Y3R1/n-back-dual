@@ -1,0 +1,3 @@
+Practice complete.
+Accuracy: {{ACC}}% (criterion: {{CRIT}}%).
+You passed the criterion. Press ENTER/RETURN to continue.

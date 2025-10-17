@@ -1,0 +1,5 @@
+# Install the package (and dependencies defined in pyproject.toml) in editable mode.
+-e .
+
+# Optional development tooling
+# pip install -e .[dev]

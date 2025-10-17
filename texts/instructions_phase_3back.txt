@@ -1,0 +1,6 @@
+You are about to start the 3-back phase.
+
+- Press SPACE when the current letter matches the one shown three trials ago.
+- Try to respond quickly and accurately.
+
+(Press ENTER/RETURN to begin the 3-back phase)
