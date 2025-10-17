@@ -178,4 +178,4 @@ If you use this implementation in your research, please cite appropriately (see 
 
 ---
 
-**Need immediate help?** Check the [Troubleshooting Guide](TROUBLESHOOTING.md) or search [existing GitHub issues](https://github.com/TH3PL4Y3R1/n_back/issues).
+**Need immediate help?** Check the [Troubleshooting Guide](TROUBLESHOOTING.md) or search [existing GitHub issues](https://github.com/TH3PL4Y3R1/n-back-dual/issues).

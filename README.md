@@ -41,8 +41,8 @@ This is the most reliable method for ensuring compatibility.
 
 ```bash
 # Clone the repository
-git clone https://github.com/TH3PL4Y3R1/n_back.git
-cd n_back
+git clone https://github.com/TH3PL4Y3R1/n-back-dual.git
+cd n-back-dual
 
 # Create virtual environment
 python3 -m venv .venv
@@ -62,8 +62,8 @@ python check_psychopy.py
 
 ```powershell
 # Clone the repository
-git clone https://github.com/TH3PL4Y3R1/n_back.git
-cd n_back
+git clone https://github.com/TH3PL4Y3R1/n-back-dual.git
+cd n-back-dual
 
 # Create virtual environment (ensure Python 3.10.x is installed)
 py -3.10 -m venv .venv
@@ -188,14 +188,14 @@ python nback_task.py --participant P001 --soa-ms 1800 --target-rate 0.4         
 ### Practice Phase
 
 - `--no-practice` (flag): Skip practice phase
-- `--practice-trials` (int): Number of practice trials. Default: `20`
+- `--practice-trials` (int): Number of practice trials. Default: `30`
 
 ### Display and Timing
 
 - `--windowed` (flag): Run windowed (for debugging only; reduces timing precision)
 - `--list-screens` (flag): Enumerate detected physical displays (with indices) and exit
 - `--screen` (int): Force use of a specific screen index (e.g., 0 for primary high-refresh monitor)
-- `--soa-ms` (int): Constant stimulus onset asynchrony in milliseconds. Default: `2000`. Controls total trial duration and replaces ITI jitter.
+- `--soa-ms` (int): Constant stimulus onset asynchrony in milliseconds. Default: `2500`. Controls total trial duration and replaces ITI jitter.
 - `--kb-backend` (str): Keyboard backend `{event, ptb}`. Default: `event`. Use `ptb` for lower-latency input if supported on your OS.
 
 ### Advanced Configuration
@@ -318,7 +318,7 @@ The task includes marker support for EEG/physiological recordings but is disable
 ## Repository Structure
 
 ```text
-n_back/
+.
 |- README.md                  # This file
 |- DATA_DICTIONARY.md         # Complete data field descriptions
 |- environment.yml            # Conda environment specification
@@ -506,14 +506,14 @@ If you use this implementation in your research, please cite:
   title={N-back Task Implementation in PsychoPy},
   author={[Add author information]},
   year={2025},
-  url={https://github.com/TH3PL4Y3R1/n_back}
+  url={https://github.com/TH3PL4Y3R1/n-back-dual}
 }
 ```
 
 ## Support
 
 - **Documentation**: See `DATA_DICTIONARY.md` for complete field descriptions
-- **Issues**: Report bugs or request features via GitHub Issues
+- **Issues**: Report bugs or request features via GitHub Issues in the repository
 - **Questions**: For usage questions, please check existing issues first
 
 ---

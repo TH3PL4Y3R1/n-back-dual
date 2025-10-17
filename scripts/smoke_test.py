@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Smoke test for two-load N-back task.
 
-Runs tiny sessions for Version A (1→3) and Version B (3→1) with 1 block per load
-and a small number of trials, in windowed mode and without practice. It prints
+Runs compact sessions for Version A (1→3) and Version B (3→1) with 3 blocks per
+load and a small number of trials, in windowed mode and without practice. It prints
 detected load per block, total blocks, and verifies that the switch occurs after
-block 1 (since blocks_per_load=1 in this test), and that the saved logs include
+block 3 (since blocks_per_load=3 in this test), and that the saved logs include
 both loads.
 
 Note: This is a lightweight harness to validate flow and data integrity.
