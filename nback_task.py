@@ -18,7 +18,6 @@ import os
 import sys
 import csv
 import random
-import string
 import argparse
 import json
 from typing import List, Dict, Optional, Tuple
@@ -31,22 +30,43 @@ try:
 except Exception:
     _HAVE_HW_KB = False
 from nback.markers import (
-    ENABLE_MARKERS,
-    MARK_CONSENT_SHOWN,
-    MARK_BLOCK_START,
-    MARK_FIXATION_ONSET,
-    MARK_STIM_TARGET,
-    MARK_STIM_NONTARGET,
-    MARK_STIM_LURE_N_MINUS_1,
-    MARK_STIM_LURE_N_PLUS_1,
-    MARK_RESPONSE_REGISTERED,
-    MARK_BLOCK_END,
-    MARK_THANK_YOU,
-    send_marker,
+    set_enable,
+    create_parallel_port,
+    send_named,
+    TRIGGERS,
 )
-from nback.sequences import (
-    TrialPlan,
-    generate_sequence,
+from nback.sequences import (TrialPlan, generate_sequence)
+from nback.def_parameters import (
+    BLOCKS_PER_LOAD_DEFAULT,
+    TRIALS_PER_BLOCK,
+    PRACTICE_TRIALS,
+    PRACTICE_TARGET_RATE,
+    PRACTICE_HAS_LURES,
+    PRACTICE_PASS_ACC,
+    EXCLUDE_CONFUSABLES,
+    LETTERS,
+    FIXATION_DUR_MS,
+    STIM_DUR_MS,
+    SOA_MS_DEFAULT,
+    TARGET_RATE,
+    LURE_N_MINUS_1_RATE,
+    LURE_N_PLUS_1_RATE,
+    MAX_CONSEC_TARGETS_DEFAULT,
+    BACKGROUND_COLOR,
+    TEXT_COLOR,
+    FONT,
+    FONT_HEIGHT,
+    FIXATION_HEIGHT,
+    KEY_PROCEED,
+    KEY_RESPONSE,
+    KEY_QUIT,
+)
+from nback.utilities import (
+    make_data_dir as util_make_data_dir,
+    timestamp as util_timestamp,
+    safe_filename as util_safe_filename,
+    _default_wrap_width as util_default_wrap_width,
+    make_autosized_text as util_make_autosized_text,
 )
 
 """Main N-back task entry point.
@@ -77,38 +97,39 @@ PRACTICE_HAS_LURES = False
 PRACTICE_PASS_ACC = 0.75
 
 # Stimulus set
-EXCLUDE_CONFUSABLES = True  # Exclude I/O/Q if True
-LETTERS = [c for c in string.ascii_uppercase]
-if EXCLUDE_CONFUSABLES:
-    LETTERS = [c for c in LETTERS if c not in {"I", "O", "Q"}]
+EXCLUDE_CONFUSABLES = EXCLUDE_CONFUSABLES
+LETTERS = LETTERS
 
 # Timing (ms)
-FIXATION_DUR_MS = 500
-STIM_DUR_MS = 500
-# Fixed SOA model: next stimulus onset occurs SOA ms after previous onset.
-SOA_MS_DEFAULT = 2500  # default constant stimulus onset asynchrony (ms)
+FIXATION_DUR_MS = FIXATION_DUR_MS
+STIM_DUR_MS = STIM_DUR_MS
+SOA_MS_DEFAULT = SOA_MS_DEFAULT
 
 # Sequence constraints (defaults used when building blocks)
-TARGET_RATE = 0.30
-LURE_N_MINUS_1_RATE = 0.05
-LURE_N_PLUS_1_RATE = 0.05
+TARGET_RATE = TARGET_RATE
+LURE_N_MINUS_1_RATE = LURE_N_MINUS_1_RATE
+LURE_N_PLUS_1_RATE = LURE_N_PLUS_1_RATE
 
 # Default limit on consecutive targets (can be overridden via CLI)
-MAX_CONSEC_TARGETS_DEFAULT = 1
+MAX_CONSEC_TARGETS_DEFAULT = MAX_CONSEC_TARGETS_DEFAULT
 
 # Visuals
-BACKGROUND_COLOR = [0.2, 0.2, 0.2]  # gray
-TEXT_COLOR = [1.0, 1.0, 1.0]
-FONT = "Arial"
-FONT_HEIGHT = 0.12  # normalized units
-FIXATION_HEIGHT = 0.18
+BACKGROUND_COLOR = BACKGROUND_COLOR
+TEXT_COLOR = TEXT_COLOR
+FONT = FONT
+FONT_HEIGHT = FONT_HEIGHT
+FIXATION_HEIGHT = FIXATION_HEIGHT
 
 # Keys
-KEY_PROCEED = "return"
-KEY_RESPONSE = "space"
-KEY_QUIT = "escape"
+KEY_PROCEED = KEY_PROCEED
+KEY_RESPONSE = KEY_RESPONSE
+KEY_QUIT = KEY_QUIT
 
-"""Markers are imported from nback.markers."""
+"""Markers are imported from nback.markers (Bosch-compatible)."""
+
+# Hardware marker state (set in main)
+GLOBAL_PARALLEL_PORT = None  # type: ignore
+GLOBAL_EYELINK = None        # type: ignore
 
 # Paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -135,15 +156,15 @@ STIM_FIXATION: Optional[visual.TextStim] = None
 # =========================
 
 def make_data_dir(path: str = DATA_DIR) -> None:
-    os.makedirs(path, exist_ok=True)
+    util_make_data_dir(path)
 
 
 def timestamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return util_timestamp()
 
 
 def safe_filename(name: str) -> str:
-    return "".join(c for c in name if c.isalnum() or c in ("-", "_", ".")).strip()
+    return util_safe_filename(name)
 
 
 # =========================
@@ -196,7 +217,11 @@ def show_consent(win: visual.Window, text_stim: Optional[visual.TextStim] = None
 
     stim.draw()
     win.flip()
-    # send_marker(MARK_CONSENT_SHOWN)  # 10: consent_shown (commented by default)
+    # Bosch-compatible marker: consent shown when displayed
+    try:
+        send_named('consent_shown', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
     event.clearEvents()
     while True:
         keys = event.waitKeys(keyList=[KEY_PROCEED, KEY_QUIT])
@@ -239,6 +264,11 @@ def show_instructions_multi(win: visual.Window, load_order: List[int]) -> None:
     txt = base.replace("{{N}}", "N").strip() + f"\n\n{seq_txt}\n\n(Press ENTER/RETURN to continue)"
     stim = _make_autosized_text(win, txt, align='center')
     stim.draw(); win.flip()
+    # Mark instructions shown when displayed
+    try:
+        send_named('instructions_shown', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
     event.clearEvents()
     while True:
         keys = event.waitKeys(keyList=[KEY_PROCEED, KEY_QUIT])
@@ -253,16 +283,7 @@ def show_instructions_multi(win: visual.Window, load_order: List[int]) -> None:
 # =========================
 
 def _default_wrap_width(win: visual.Window, margin: float = 0.95) -> float:
-    """Compute wrap width in units='height' using current window aspect ratio.
-
-    When units='height', the usable width equals the aspect ratio. We apply a
-    margin < 1 to keep horizontal padding.
-    """
-    try:
-        aspect = win.size[0] / float(win.size[1])
-    except Exception:
-        aspect = 16/9
-    return aspect * margin
+    return util_default_wrap_width(win, margin)
 
 
 def _make_autosized_text(
@@ -272,58 +293,9 @@ def _make_autosized_text(
     min_height: float = 0.03,
     max_height_frac: float = 0.9,
     shrink_factor: float = 0.9,
-    align: str = 'left',  # 'left' or 'center'
+    align: str = 'left',
 ) -> visual.TextStim:
-    """Create a TextStim that automatically shrinks to fit available height.
-
-    Inputs:
-    - win: PsychoPy Window (units='height')
-    - text: Content to display
-    - start_height: Initial character height (units='height')
-    - min_height: Minimum character height
-    - max_height_frac: Max allowed fraction of window pixel height for bounding box
-    - shrink_factor: Step multiplier while shrinking
-
-    Returns: configured visual.TextStim
-    """
-    wrap_w = _default_wrap_width(win)
-    h = start_height
-    if align not in {'left','center'}:
-        align = 'left'
-    anchor_h = 'center'
-    stim = visual.TextStim(
-        win,
-        text=text,
-        color=TEXT_COLOR,
-        font=FONT,
-        height=h,
-        wrapWidth=wrap_w,
-        alignText=align,
-        anchorHoriz=anchor_h,
-        anchorVert='center',
-    )
-
-    # Iteratively shrink until bounding box fits within desired vertical fraction.
-    # boundingBox returns (w, h) in pixels, or None if not yet drawable.
-    try:
-        while True:
-            bb = getattr(stim, 'boundingBox', None)
-            if not bb:
-                # Draw once to establish metrics
-                stim.draw(); win.flip(); core.wait(0.01)
-                bb = getattr(stim, 'boundingBox', None)
-            if not bb:
-                break
-            bb_h = bb[1] if isinstance(bb, (list, tuple)) and len(bb) > 1 else 0
-            if bb_h <= win.size[1] * max_height_frac:
-                break
-            h *= shrink_factor
-            if h < min_height:
-                break
-            stim.height = h
-    except Exception:
-        pass  # Fail gracefully; keep last size
-    return stim
+    return util_make_autosized_text(win, text, start_height, min_height, max_height_frac, shrink_factor, align, color=TEXT_COLOR, font=FONT)
 
 
 def show_practice_headsup(win: visual.Window) -> None:
@@ -363,7 +335,10 @@ def show_thanks(win: visual.Window) -> None:
     text = _load_text(INSTR_THANKS_FILE, "Thank you!") + "\n"
     stim = _make_autosized_text(win, text, start_height=0.09, align='center')
     stim.draw(); win.flip()
-    send_marker(MARK_THANK_YOU, {"event": "thank_you"})
+    try:
+        send_named('debrief_shown', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
     core.wait(1.5)
 
 
@@ -500,13 +475,14 @@ def _draw_stimulus(win: visual.Window, letter: str) -> None:
 
 
 def _marker_code_for_stim(is_target: int, lure_type: str) -> int:
+    # Keep a code for CSV; this no longer controls hardware sends directly
     if is_target:
-        return MARK_STIM_TARGET
+        return 41  # legacy: target
     if lure_type == "n-1":
-        return MARK_STIM_LURE_N_MINUS_1
+        return 43
     if lure_type == "n+1":
-        return MARK_STIM_LURE_N_PLUS_1
-    return MARK_STIM_NONTARGET
+        return 44
+    return 42
 
 
 def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[TrialPlan],
@@ -522,8 +498,12 @@ def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[Trial
     Returns:
     - block accuracy and mean RT (ms) for correct trials in this block.
     """
-    # Start marker
-    send_marker(MARK_BLOCK_START, {"event": "block_start", "n_back": n_back, "block_idx": block_idx})
+    # Start marker (by load)
+    try:
+        send_named('block_ll_start' if n_back == 1 else 'block_hl_start',
+                   parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
 
     # Use hardware keyboard when available for better timing
     kb = None
@@ -547,14 +527,10 @@ def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[Trial
             kb.clearEvents()
         stim_onset = win.flip()
         stim_marker = _marker_code_for_stim(plan.is_target, plan.lure_type)
-        send_marker(stim_marker, {
-            "event": "stimulus_onset",
-            "block_idx": block_idx,
-            "trial_idx": t_idx,
-            "is_target": plan.is_target,
-            "lure_type": plan.lure_type,
-            "stimulus": plan.stimulus,
-        })
+        try:
+            send_named('stim_presentation', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+        except Exception:
+            pass
 
         # Response collection
         got_response = False
@@ -577,13 +553,11 @@ def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[Trial
                     got_response = True
                     resp_key = name
                     rt_ms = (k.rt or 0.0) * 1000.0
-                    send_marker(MARK_RESPONSE_REGISTERED, {
-                        "event": "response_registered",
-                        "block_idx": block_idx,
-                        "trial_idx": t_idx,
-                        "key": name,
-                        "rt_ms": rt_ms,
-                    })
+                    try:
+                        send_named('response_ll' if n_back == 1 else 'response_hl',
+                                   parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+                    except Exception:
+                        pass
             else:
                 keys = event.getKeys(keyList=[KEY_RESPONSE, KEY_QUIT], timeStamped=resp_clock)
                 if keys and not got_response:
@@ -594,20 +568,21 @@ def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[Trial
                             got_response = True
                             resp_key = k
                             rt_ms = t * 1000.0
-                            send_marker(MARK_RESPONSE_REGISTERED, {
-                                "event": "response_registered",
-                                "block_idx": block_idx,
-                                "trial_idx": t_idx,
-                                "key": k,
-                                "rt_ms": rt_ms,
-                            })
+                            try:
+                                send_named('response_ll' if n_back == 1 else 'response_hl',
+                                           parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+                            except Exception:
+                                pass
                             break
             # Draw based on phase: stimulus then fixation
             if now_ms < STIM_DUR_MS:
                 _draw_stimulus(win, plan.stimulus)
             else:
                 if not fixation_mark_sent:
-                    send_marker(MARK_FIXATION_ONSET, {"event": "fixation_onset", "block_idx": block_idx, "trial_idx": t_idx})
+                    try:
+                        send_named('fixation_onset', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+                    except Exception:
+                        pass
                     fixation_mark_sent = True
                 _draw_fixation(win)
             win.flip()
@@ -638,14 +613,18 @@ def run_block(win: visual.Window, block_idx: int, n_back: int, plans: List[Trial
                 "rt_ms": f"{rt_ms:.2f}" if rt_ms is not None else "",
                 "correct": correct,
                 "marker_code_stim": stim_marker,
-                "marker_code_resp": MARK_RESPONSE_REGISTERED if got_response else "",
+                "marker_code_resp": (50 if n_back == 1 else 51) if got_response else "",
             }
             rows_out.append(row)
 
     # No trailing ITI; pacing is enforced per-trial via SOA
 
-    # End marker
-    send_marker(MARK_BLOCK_END, {"event": "block_end", "block_idx": block_idx})
+    # End marker (by load)
+    try:
+        send_named('block_ll_end' if n_back == 1 else 'block_hl_end',
+                   parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
 
     acc = correct_count / len(plans) if plans else 0.0
     mean_rt = (sum(rts_out) / len(rts_out)) if rts_out else None
@@ -851,6 +830,34 @@ def main(argv: Optional[List[str]] = None) -> int:
         print("Warning: Could not detect display refresh rate; proceeding without it.")
 
     # =========================
+    # Hardware markers: safe initialization (works without hardware)
+    # =========================
+    global GLOBAL_PARALLEL_PORT, GLOBAL_EYELINK
+    GLOBAL_PARALLEL_PORT = None
+    GLOBAL_EYELINK = None
+    try:
+        # Bosch default address
+        GLOBAL_PARALLEL_PORT = create_parallel_port(0x03BC)
+        set_enable(True)
+    except Exception:
+        GLOBAL_PARALLEL_PORT = None
+        set_enable(False)
+    # EyeLink is optional; only wire if your session sets it up elsewhere
+    try:
+        import pylink  # type: ignore
+        # If you have a session-wide EyeLink object, assign it like:
+        # GLOBAL_EYELINK = existing_eyelink_instance
+        GLOBAL_EYELINK = None
+    except Exception:
+        GLOBAL_EYELINK = None
+
+    # Mark experiment start
+    try:
+        send_named('experiment_start', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
+
+    # =========================
     # PHASE: Consent -> Instructions -> Practice heads-up
     # =========================
     show_consent(win)
@@ -917,12 +924,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     # =========================
     practice_trials = max(1, int(args.practice_trials))
     if not args.no_practice and practice_trials > 0:
+        try:
+            send_named('practice_start', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+        except Exception:
+            pass
         while True:
             acc, _ = run_practice(win, 2, practice_trials)
             if acc >= PRACTICE_PASS_ACC:
                 break
             # If failed, re-show very brief reminder before repeating
             show_practice_headsup(win)
+        try:
+            send_named('practice_end', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+        except Exception:
+            pass
 
     # =========================
     # PHASE: Main Task (two sequential loads)
@@ -935,6 +950,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     for phase_idx, n_back in enumerate(load_order, start=1):
         # Phase-specific instructions / heads-up
         show_phase_instructions(win, n_back)
+        # Also mark instructions_shown for each phase head-up, if desired
+        try:
+            send_named('instructions_shown', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+        except Exception:
+            pass
 
         for within_phase_b in range(1, blocks_per_load + 1):
             block_counter += 1
@@ -990,6 +1010,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     try:
         win.close()
+    except Exception:
+        pass
+
+    # Mark experiment end
+    try:
+        send_named('experiment_end', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
     except Exception:
         pass
 
