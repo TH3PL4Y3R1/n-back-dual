@@ -1,4 +1,4 @@
-name: n_back
+name: n-back
 channels:
   - conda-forge
 dependencies:
