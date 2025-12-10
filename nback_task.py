@@ -20,6 +20,7 @@ import csv
 import random
 import argparse
 import json
+import re
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
@@ -131,6 +132,7 @@ KEY_QUIT = KEY_QUIT
 # Hardware marker state (set in main)
 GLOBAL_PARALLEL_PORT = None  # type: ignore
 GLOBAL_EYELINK = None        # type: ignore
+EDF_NAME = ""
 
 # Paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -166,6 +168,39 @@ def timestamp() -> str:
 
 def safe_filename(name: str) -> str:
     return util_safe_filename(name)
+
+
+def _make_edf_name(participant: str) -> str:
+    """Create an EyeLink-safe EDF name (<=8 chars, alphanumeric, with .EDF)."""
+    cleaned = re.sub(r"[^A-Za-z0-9]", "", participant.upper())
+    tag = (cleaned[:2] or "NB")
+    return f"{tag[:2]:<2}NB.EDF"[:8]
+
+
+def _setup_eyelink(win: visual.Window, participant: str, session_ts: str):
+    """Connect to EyeLink, open EDF, calibrate/validate, and start recording."""
+    import pylink
+    from EyeLinkCoreGraphicsPsychoPy import EyeLinkCoreGraphicsPsychoPy
+
+    ip = "100.1.1.1"
+    el = pylink.EyeLink(ip)
+
+    edf_name = _make_edf_name(participant)
+    el.openDataFile(edf_name)
+
+    scn_w, scn_h = win.size
+    el.sendCommand(f"screen_pixel_coords = 0 0 {scn_w-1} {scn_h-1}")
+
+    genv = EyeLinkCoreGraphicsPsychoPy(el, win)
+    pylink.openGraphicsEx(genv)
+    el.doTrackerSetup()  # runs calibration and validation
+
+    el.setOfflineMode()
+    core.wait(0.05)
+    el.startRecording(1, 1, 1, 1)
+    el.sendMessage(f"REC_START {participant} {session_ts}")
+
+    return el, edf_name
 
 
 # =========================
@@ -684,6 +719,29 @@ def graceful_quit(writer: Optional[csv.DictWriter], f: Optional[object], rows: L
             win.close()
     except Exception:
         pass
+    # EyeLink cleanup (attempt even on abort)
+    global GLOBAL_EYELINK
+    try:
+        if GLOBAL_EYELINK is not None:
+            try:
+                GLOBAL_EYELINK.stopRecording()
+            except Exception:
+                pass
+            try:
+                GLOBAL_EYELINK.closeDataFile()
+            except Exception:
+                pass
+            try:
+                local_edf = os.path.join(DATA_DIR, EDF_NAME.lower() or "session.edf")
+                GLOBAL_EYELINK.receiveDataFile(EDF_NAME, local_edf)
+            except Exception:
+                pass
+            try:
+                GLOBAL_EYELINK.close()
+            except Exception:
+                pass
+    except Exception:
+        pass
     core.quit()
 
 
@@ -819,23 +877,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception:
         pass
 
-    # Detect and report display refresh rate
+    # Detect and report display refresh rate (skip probe to avoid hangs)
     refresh_hz = None
     try:
-        refresh_hz = win.getActualFrameRate(nIdentical=20, nMaxFrames=240, nWarmUpFrames=20, threshold=1)
+        refresh_hz = None  # skip getActualFrameRate to prevent blocking
+        # To probe later (faster/safer), try:
+        # refresh_hz = win.getActualFrameRate(nIdentical=5, nMaxFrames=120, nWarmUpFrames=10, threshold=1)
     except Exception:
         refresh_hz = None
     if refresh_hz:
         print(f"Detected display refresh: {refresh_hz:.3f} Hz (frame ≈ {1000.0/refresh_hz:.2f} ms)")
     else:
-        print("Warning: Could not detect display refresh rate; proceeding without it.")
+        print("Skipping display refresh measurement (set manually if needed).")
 
     # =========================
     # Hardware markers: safe initialization (works without hardware)
     # =========================
-    global GLOBAL_PARALLEL_PORT, GLOBAL_EYELINK
+    global GLOBAL_PARALLEL_PORT, GLOBAL_EYELINK, EDF_NAME
     GLOBAL_PARALLEL_PORT = None
     GLOBAL_EYELINK = None
+    EDF_NAME = ""
     try:
         # Bosch default address
         GLOBAL_PARALLEL_PORT = create_parallel_port(0xBFB0)
@@ -843,14 +904,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception:
         GLOBAL_PARALLEL_PORT = None
         set_enable(False)
-    # EyeLink is optional; only wire if your session sets it up elsewhere
+
+    # EyeLink: connect, calibrate/validate, start recording
     try:
-        import pylink  # type: ignore
-        # If you have a session-wide EyeLink object, assign it like:
-        # GLOBAL_EYELINK = existing_eyelink_instance
+        GLOBAL_EYELINK, EDF_NAME = _setup_eyelink(win, CURRENT_PARTICIPANT, SESSION_TS)
+    except Exception as e:
+        print(f"EyeLink unavailable: {e}")
         GLOBAL_EYELINK = None
-    except Exception:
-        GLOBAL_EYELINK = None
+        EDF_NAME = ""
 
     # Mark experiment start
     try:
@@ -1017,6 +1078,30 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Mark experiment end
     try:
         send_named('experiment_end', parallel_port=GLOBAL_PARALLEL_PORT, eyelink=GLOBAL_EYELINK)
+    except Exception:
+        pass
+
+    # EyeLink finalization (normal exit)
+    try:
+        if GLOBAL_EYELINK is not None:
+            try:
+                GLOBAL_EYELINK.stopRecording()
+            except Exception:
+                pass
+            try:
+                GLOBAL_EYELINK.closeDataFile()
+            except Exception:
+                pass
+            try:
+                local_edf = os.path.join(DATA_DIR, EDF_NAME.lower() or "session.edf")
+                GLOBAL_EYELINK.receiveDataFile(EDF_NAME, local_edf)
+                print(f"Saved EDF to {local_edf}")
+            except Exception as e:
+                print(f"Could not receive EDF: {e}")
+            try:
+                GLOBAL_EYELINK.close()
+            except Exception:
+                pass
     except Exception:
         pass
 
