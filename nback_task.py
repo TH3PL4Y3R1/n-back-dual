@@ -23,6 +23,7 @@ import json
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
+
 from psychopy import core, visual, event
 try:
     from psychopy.hardware import keyboard as hw_keyboard
@@ -837,7 +838,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     GLOBAL_EYELINK = None
     try:
         # Bosch default address
-        GLOBAL_PARALLEL_PORT = create_parallel_port(0x03BC)
+        GLOBAL_PARALLEL_PORT = create_parallel_port(0xBFB0)
         set_enable(True)
     except Exception:
         GLOBAL_PARALLEL_PORT = None

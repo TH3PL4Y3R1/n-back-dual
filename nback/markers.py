@@ -11,7 +11,7 @@ only when hardware/software is available and configured.
 from typing import Optional, Dict, Any
 
 # Toggle markers here (keep False by default; set to True when hardware is available)
-ENABLE_MARKERS = False
+ENABLE_MARKERS = True
 
 # Default numeric codes for named triggers. These can be changed by client code if needed.
 # Chosen to be unique and <=255 so they fit on an 8-bit parallel port output.
@@ -55,7 +55,7 @@ def send_marker(code: int,
     # Parallel port send
     if parallel_port is not None:
         try:
-            parallel_port.setData(int(code) & 0xFF)
+            parallel_port.setData(int(code) & 0xBFB0)
         except Exception:
             # don't crash the experiment if marker backend fails
             pass
@@ -95,7 +95,7 @@ def set_trigger_code(name: str, code: int) -> None:
     TRIGGERS[name] = int(code) & 0xFF
 
 
-def create_parallel_port(address: int = 0x03BC):
+def create_parallel_port(address: int = 0xBFB0):
     """Create and return a PsychoPy ParallelPort instance.
 
     This helper avoids importing psychopy.parallel at module import time and
