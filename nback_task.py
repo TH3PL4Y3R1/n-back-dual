@@ -507,9 +507,6 @@ def _draw_stimulus(win: visual.Window, letter: str) -> None:
     STIM_LETTER.draw()
 
 
-# Note: fixed-SOA pacing is implemented in run_block; no generic flip-for-ms helper needed.
-
-
 def _marker_code_for_stim(is_target: int, lure_type: str) -> int:
     # Keep a code for CSV; this no longer controls hardware sends directly
     if is_target:

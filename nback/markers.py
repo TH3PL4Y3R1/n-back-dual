@@ -25,7 +25,7 @@ TRIGGERS: Dict[str, int] = {
     'block_ll_end': 21,
     'block_hl_start': 30,  # high load block start
     'block_hl_end': 31,
-    'stim_presentation': 40,
+    'stim_presentation': 40,  
     'fixation_onset': 41,
     'response_ll': 50,
     'response_hl': 51,
@@ -55,7 +55,7 @@ def send_marker(code: int,
     # Parallel port send
     if parallel_port is not None:
         try:
-            parallel_port.setData(int(code) & 0xBFB0)
+            parallel_port.setData(int(code) & 0xFF)
         except Exception:
             # don't crash the experiment if marker backend fails
             pass
