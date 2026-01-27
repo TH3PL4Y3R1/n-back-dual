@@ -1,0 +1,14 @@
+1. CONSENTIMIENTO INFORMADO
+2. 
+3. Por favor, lea la siguiente información cuidadosamente antes de comenzar la tarea.
+4. 
+5. - Propósito: Este estudio investiga la memoria de trabajo utilizando la tarea N-back.
+6. - Procedimiento: Verá letras y debe presionar ESPACIO cuando la letra actual coincida con la mostrada N ensayos atrás.
+7. - Riesgos/Incomodidades: Mínimos. Puede tomar descansos entre bloques.
+8. - Beneficios: No hay beneficio directo, pero su participación ayudará a la investigación.
+9. - Participación Voluntaria: Su participación es voluntaria. Puede retirarse en cualquier momento presionando ESC para salir sin guardar.
+10. - Datos: Las respuestas y tiempos se registran de forma anónima utilizando su código de participante proporcionado.
+11. - Contacto: Agregue aquí la información de contacto de su laboratorio.
+12. 
+13. Al presionar ENTER/RETURN, confirma que ha leído y comprendido esta información y consiente en participar.
+14. 
