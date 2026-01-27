@@ -1,0 +1,6 @@
+1. Está a punto de comenzar la fase 2-back.
+2. 
+3. - Presione ESPACIO cuando la letra actual coincida con la mostrada dos ensayos atrás.
+4. - Intente responder rápida y precisamente.
+5. 
+6. (Presione ENTER/RETURN para comenzar la fase 2-back)

@@ -1,0 +1,5 @@
+1. Bienvenido a la tarea {{N}}-back.
+2. Verá una secuencia de letras. Presione ESPACIO cuando la letra actual coincida con la de {{N}} ensayo(s) atrás.
+3. Si no coincide, no presione ninguna tecla.
+4. Responda lo más rápido y preciso posible.
+5. 
