@@ -1,0 +1,4 @@
+1. Práctica completa.
+2. Precisión: {{ACC}}% (criterio: {{CRIT}}%).
+3. No alcanzó el criterio. Presione ENTER/RETURN para repetir la práctica.
+4. 
